@@ -1,0 +1,7 @@
+# .gitignore
+*.tfstate
+*.tfstate.*
+.terraform/
+.env
+*.pem
+local.settings.json
