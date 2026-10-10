@@ -1,0 +1,96 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.48.1.52935",
+      "templateHash": "3092872801226366061"
+    }
+  },
+  "parameters": {
+    "appName": {
+      "type": "string",
+      "metadata": {
+        "description": "Globally unique base name for the web app and App Service plan."
+      }
+    },
+    "environment": {
+      "type": "string",
+      "allowedValues": [
+        "dev",
+        "staging",
+        "prod"
+      ],
+      "metadata": {
+        "description": "Deployment environment."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region where the resources will be deployed."
+      }
+    }
+  },
+  "variables": {
+    "resourceName": "[format('{0}-{1}', parameters('appName'), parameters('environment'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-plan', variables('resourceName'))]",
+      "location": "[parameters('location')]",
+      "kind": "linux",
+      "sku": {
+        "name": "B1",
+        "tier": "Basic",
+        "capacity": 1
+      },
+      "properties": {
+        "reserved": true
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2023-12-01",
+      "name": "[variables('resourceName')]",
+      "location": "[parameters('location')]",
+      "kind": "app,linux",
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', format('{0}-plan', variables('resourceName')))]",
+        "httpsOnly": true,
+        "siteConfig": {
+          "linuxFxVersion": "NODE|20-lts",
+          "minTlsVersion": "1.2",
+          "ftpsState": "Disabled"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', format('{0}-plan', variables('resourceName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "apiVersion": "2023-05-01",
+      "name": "[format('lang-{0}-{1}', parameters('appName'), parameters('environment'))]",
+      "location": "[parameters('location')]",
+      "kind": "TextAnalytics",
+      "sku": {
+        "name": "F0"
+      },
+      "properties": {
+        "customSubDomainName": "[format('lang-{0}-{1}', parameters('appName'), parameters('environment'))]",
+        "publicNetworkAccess": "Enabled"
+      }
+    }
+  ],
+  "outputs": {
+    "languageEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', format('lang-{0}-{1}', parameters('appName'), parameters('environment'))), '2023-05-01').endpoint]"
+    }
+  }
+}
